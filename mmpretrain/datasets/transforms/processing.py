@@ -92,6 +92,56 @@ VISION_TRANSFORMS = register_vision_transforms()
 
 
 @TRANSFORMS.register_module()
+class RandomRoll(BaseTransform):
+    """
+    Roll image along axis. For an image (H, W, C), axis=0 will roll along the H axis,
+    i.e., vertically.
+
+    Required Keys:
+
+    - img
+    - gt_seg_map (optional)
+
+    Modified Keys:
+
+    - img
+    - gt_seg_map (optional)
+
+    New Keys:
+
+    - roll_axis
+    - roll_pixels
+
+    Args:
+        axis (int): axis to roll along, use negative indexing for flexibility
+            with grayscale vs colored images. Default: 0
+    """
+
+    def __init__(self, axis: int = 0):
+        self.axis = axis
+
+    def transform(self, results: dict) -> dict:
+        img = results['img']
+
+        num_pixels = np.random.randint(0, img.shape[self.axis])
+        img = np.roll(img, shift=num_pixels, axis=self.axis)
+        results['img'] = img
+
+        results['roll_axis'] = self.axis
+        results['roll_pixels'] = num_pixels
+
+        if results.get('gt_seg_map', None) is not None:
+            results['gt_seg_map'] = np.roll(results['gt_seg_map'], shift=num_pixels, axis=self.axis)
+
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += f'(axis={self.axis})'
+        return repr_str
+
+
+@TRANSFORMS.register_module()
 class RandomCrop(BaseTransform):
     """Crop the given Image at a random location.
 

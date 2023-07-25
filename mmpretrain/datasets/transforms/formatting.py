@@ -1,11 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from collections import defaultdict
 from collections.abc import Sequence
+from zipfile import ZipFile
 
 import cv2
+import mmcv
 import numpy as np
 import torch
 import torchvision.transforms.functional as F
+from mmcv import LoadImageFromFile
 from mmcv.transforms import BaseTransform
 from mmengine.utils import is_str
 from PIL import Image
@@ -35,6 +38,79 @@ def to_tensor(data):
             f'Type {type(data)} cannot be converted to tensor.'
             'Supported types are: `numpy.ndarray`, `torch.Tensor`, '
             '`Sequence`, `int` and `float`')
+
+
+@TRANSFORMS.register_module()
+class LoadImageFromZipFile(LoadImageFromFile):
+    """Load an image from a zipfile.
+
+    Required Keys:
+
+    - zip_path
+    - img_path
+
+    Modified Keys:
+
+    - img
+    - img_shape
+    - ori_shape
+
+    Args:
+        color_type (str): The flag argument for :func:`mmcv.imfrombytes`.
+            Defaults to 'color'.
+        imdecode_backend (str): The image decoding backend type. The backend
+            argument for :func:`mmcv.imfrombytes`.
+            See :func:`mmcv.imfrombytes` for details.
+            Defaults to 'cv2'.
+    """
+
+    def __init__(self,
+                 color_type: str = 'color',
+                 imdecode_backend: str = 'cv2'):
+        self.color_type = color_type
+        self.imdecode_backend = imdecode_backend
+
+    def transform(self, results: dict) -> dict:
+        """Method to load image from zipfile."""
+        with ZipFile(results['zip_path']) as zf:
+            img_bytes = zf.read(results['img_path'])
+
+        img = mmcv.imfrombytes(
+            img_bytes, flag=self.color_type, backend=self.imdecode_backend
+        )
+
+        results['img'] = img
+        results['img_shape'] = img.shape
+        results['ori_shape'] = img.shape
+        return results
+
+
+@TRANSFORMS.register_module()
+class DuplicateImageChannels(BaseTransform):
+    """
+    Duplicate 2D image along channels.
+
+    Required Keys:
+
+    - img
+
+    Modified Keys:
+
+    - img
+
+    Args:
+        num_repeat (int): number of times to repeat image along channel axis. Default: 3
+    """
+
+    def __init__(self, num_repeat: int = 3):
+        self.num_repeat = num_repeat
+
+    def transform(self, results: dict) -> dict:
+        img = results['img']
+        assert img.ndim == 2, f'image should be 2 dimensional, got {img.ndim} dimensions'
+        img = np.repeat(img[:, :, None], self.num_repeat, axis=-1)
+        results['img'] = img
+        return results
 
 
 @TRANSFORMS.register_module()

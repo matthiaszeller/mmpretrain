@@ -9,7 +9,7 @@ from .auto_augment import (AutoAugment, AutoContrast, BaseAugTransform,
                            RandAugment, Rotate, Sharpness, Shear, Solarize,
                            SolarizeAdd, Translate)
 from .formatting import (Collect, NumpyToPIL, PackInputs, PackMultiTaskInputs,
-                         PILToNumpy, Transpose)
+                         PILToNumpy, Transpose, LoadImageFromZipFile, DuplicateImageChannels)
 from .processing import (Albumentations, BEiTMaskGenerator, CleanCaption,
                          ColorJitter, EfficientNetCenterCrop,
                          EfficientNetRandomCrop, Lighting, RandomCrop,
@@ -36,5 +36,5 @@ __all__ = [
     'RandomFlip', 'RandomGrayscale', 'RandomResize', 'Resize', 'MultiView',
     'ApplyToList', 'CleanCaption', 'RandomTranslatePad',
     'RandomResizedCropAndInterpolationWithTwoPic', 'get_transform_idx',
-    'remove_transform'
+    'remove_transform', 'LoadImageFromZipFile', 'DuplicateImageChannels'
 ]
