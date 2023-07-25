@@ -4,8 +4,9 @@ data_root = 'data/shockwave/images-3D-polar'
 
 data_preprocessor = dict(
     type='SelfSupDataPreprocessor',
-    mean=[123.675, 116.28, 103.53],
-    std=[58.395, 57.12, 57.375],
+    # gray channel will be duplicated
+    mean=[24.868, 24.868, 24.868],
+    std=[53.360, 53.360, 53.360],
     to_rgb=True)
 
 train_pipeline = [
