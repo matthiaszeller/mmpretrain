@@ -56,14 +56,18 @@ class MAEPretrainDecoder(BaseModule):
                  mlp_ratio: int = 4,
                  norm_cfg: dict = dict(type='LN', eps=1e-6),
                  predict_feature_dim: Optional[float] = None,
-                 init_cfg: Optional[Union[List[dict], dict]] = None) -> None:
+                 init_cfg: Optional[Union[List[dict], dict]] = None,
+                 norm_stats=(116.28, 57.12),
+                 ) -> None:
         super().__init__(init_cfg=init_cfg)
         self.num_patches = num_patches
+        self.norm_stats = norm_stats
 
         # used to convert the dim of features from encoder to the dim
         # compatible with that of decoder
         self.decoder_embed = nn.Linear(embed_dim, decoder_embed_dim, bias=True)
 
+        # learnable token to represent masked patches
         self.mask_token = nn.Parameter(torch.zeros(1, 1, decoder_embed_dim))
 
         # create new position embedding, different from that in encoder
@@ -136,6 +140,7 @@ class MAEPretrainDecoder(BaseModule):
             x_,
             dim=1,
             index=ids_restore.unsqueeze(-1).repeat(1, 1, x.shape[2]))
+        # add cls token
         x = torch.cat([x[:, :1, :], x_], dim=1)
 
         # add pos embed
@@ -151,6 +156,12 @@ class MAEPretrainDecoder(BaseModule):
 
         # remove cls token
         x = x[:, 1:, :]
+
+        # input image is constrained (uint8)
+        x = torch.sigmoid(x) * 255.
+        # but input is also normalized
+        mu, std = self.norm_stats
+        x = (x - mu) / std
 
         return x
 
