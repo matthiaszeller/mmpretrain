@@ -59,6 +59,7 @@ class MAEViT(VisionTransformer):
                  arch: Union[str, dict] = 'b',
                  img_size: int = 224,
                  patch_size: int = 16,
+                 in_chans: int = 3,
                  out_indices: Union[Sequence, int] = -1,
                  drop_rate: float = 0,
                  drop_path_rate: float = 0,
@@ -74,6 +75,7 @@ class MAEViT(VisionTransformer):
             arch=arch,
             img_size=img_size,
             patch_size=patch_size,
+            in_channels=in_chans,
             out_indices=out_indices,
             drop_rate=drop_rate,
             drop_path_rate=drop_path_rate,
@@ -234,6 +236,11 @@ class MAE(BaseSelfSupervisor):
         loss = self.head.loss(pred, inputs, mask)
         losses = dict(loss=loss)
         return losses
+
+    def get_data(self, inputs: torch.Tensor, data_samples: List[DataSample]):
+        latent, mask, ids_restore = self.backbone(inputs)
+        pred = self.neck(latent, ids_restore)
+        return latent, mask, ids_restore, pred
 
 
 @MODELS.register_module()

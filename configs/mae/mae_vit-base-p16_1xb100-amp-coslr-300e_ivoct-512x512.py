@@ -7,9 +7,14 @@ _base_ = [
 model = dict(
     backbone=dict(
         img_size=512,
+        in_chans=1,
     ),
     neck=dict(
-        num_patches=1024
+        num_patches=1024,
+        in_chans=1,
+    ),
+    head=dict(
+        in_chans=1
     )
 )
 
