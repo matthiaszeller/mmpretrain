@@ -10,6 +10,6 @@ model = dict(
 # adjust the lr according to pretraining config
 optim_wrapper = dict(
     optimizer=dict(
-        lr=1.5e-4 * 128 / 4096,
+        lr=1.5e-4 * 128 / 256,
     )
 )

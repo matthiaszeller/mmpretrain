@@ -38,13 +38,13 @@ param_scheduler = [
         start_factor=0.0001,
         by_epoch=True,
         begin=0,
-        end=40,
+        end=1,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
         T_max=260,
         by_epoch=True,
-        begin=40,
+        begin=1,
         end=300,
         convert_to_iter_based=True)
 ]
