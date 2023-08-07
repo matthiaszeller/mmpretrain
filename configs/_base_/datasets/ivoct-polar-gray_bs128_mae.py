@@ -4,11 +4,10 @@ data_root = 'data/shockwave/images-3D-polar'
 
 data_preprocessor = dict(
     type='SelfSupDataPreprocessor',
-    # green channel will be duplicated
     # mean=[123.675, 116.28, 103.53],
-    mean=[116.28],
+    mean=[24.87],
     # std=[58.395, 57.12, 57.375],
-    std=[57.12],
+    std=[53.36],
     #to_rgb=True
 )
 
