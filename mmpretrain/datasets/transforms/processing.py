@@ -142,6 +142,139 @@ class RandomRoll(BaseTransform):
 
 
 @TRANSFORMS.register_module()
+class RandomRotate(BaseTransform):
+    """Rotate the image & seg.
+
+    Required Keys:
+
+    - img
+    - gt_seg_map
+
+    Modified Keys:
+
+    - img
+    - gt_seg_map
+
+    Args:
+        prob (float): The rotation probability.
+        degree (float, tuple[float]): Range of degrees to select from. If
+            degree is a number instead of tuple like (min, max),
+            the range of degree will be (``-degree``, ``+degree``)
+        pad_val (float, optional): Padding value of image. Default: 0.
+        seg_pad_val (float, optional): Padding value of segmentation map.
+            Default: 255.
+        center (tuple[float], optional): Center point (w, h) of the rotation in
+            the source image. If not specified, the center of the image will be
+            used. Default: None.
+        auto_bound (bool): Whether to adjust the image size to cover the whole
+            rotated image. Default: False
+    """
+
+    def __init__(self,
+                 prob,
+                 degree,
+                 pad_val=0,
+                 seg_pad_val=255,
+                 center=None,
+                 auto_bound=False):
+        self.prob = prob
+        assert prob >= 0 and prob <= 1
+        if isinstance(degree, (float, int)):
+            assert degree > 0, f'degree {degree} should be positive'
+            self.degree = (-degree, degree)
+        else:
+            self.degree = degree
+        assert len(self.degree) == 2, f'degree {self.degree} should be a ' \
+                                      f'tuple of (min, max)'
+        self.pal_val = pad_val
+        self.seg_pad_val = seg_pad_val
+        self.center = center
+        self.auto_bound = auto_bound
+
+    @cache_randomness
+    def generate_degree(self):
+        return np.random.rand() < self.prob, np.random.uniform(
+            min(*self.degree), max(*self.degree))
+
+    def transform(self, results: dict) -> dict:
+        """Call function to rotate image, semantic segmentation maps.
+
+        Args:
+            results (dict): Result dict from loading pipeline.
+
+        Returns:
+            dict: Rotated results.
+        """
+
+        rotate, degree = self.generate_degree()
+        if rotate:
+            # rotate image
+            results['img'] = mmcv.imrotate(
+                results['img'],
+                angle=degree,
+                border_value=self.pal_val,
+                center=self.center,
+                auto_bound=self.auto_bound)
+
+            # rotate segs
+            for key in results.get('seg_fields', []):
+                results[key] = mmcv.imrotate(
+                    results[key],
+                    angle=degree,
+                    border_value=self.seg_pad_val,
+                    center=self.center,
+                    auto_bound=self.auto_bound,
+                    interpolation='nearest')
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += f'(prob={self.prob}, ' \
+                    f'degree={self.degree}, ' \
+                    f'pad_val={self.pal_val}, ' \
+                    f'seg_pad_val={self.seg_pad_val}, ' \
+                    f'center={self.center}, ' \
+                    f'auto_bound={self.auto_bound})'
+        return repr_str
+
+
+@TRANSFORMS.register_module()
+class CustomGaussianBlur(BaseTransform):
+    """
+    Apply Gaussian Blur to the image.
+
+    Required Keys:
+    - img
+
+    Modified Keys:
+    - self.output_key
+
+    Args:
+        output_key (str): output key for the transformed data. Default: 'img'.
+        sigma (float): sigma for Gaussian Blur. Default: 1.
+        kernel_size (int): kernel size for Gaussian Blur. Default: 3.
+    """
+
+    def __init__(self, output_key: str = 'img', sigma: float = 1., kernel_size: int = 3):
+        self.output_key = output_key
+        self.sigma = sigma
+        self.kernel_size = kernel_size
+
+    def transform(self, results: dict) -> dict:
+        img = results['img']
+        single_chan = img.shape[-1] == 1
+
+        img = cv2.GaussianBlur(img, (self.kernel_size, self.kernel_size), self.sigma)
+
+        # one-channel images have their channel axis removed by cv2.GaussianBlur
+        if single_chan:
+            img = np.expand_dims(img, axis=-1)
+
+        results[self.output_key] = img
+        return results
+
+
+@TRANSFORMS.register_module()
 class RandomCrop(BaseTransform):
     """Crop the given Image at a random location.
 
