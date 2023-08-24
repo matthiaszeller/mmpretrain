@@ -211,8 +211,17 @@ class iTPNHiViT(HiViT):
                 x = x + pos_embed
             x = self.pos_drop(x)
 
+            # relative position encoding
+            rpe_index = None
+            if self.rpe:
+                B, L = ids_keep.shape
+                rpe_index = self.relative_position_index
+                rpe_index = torch.gather(
+                    rpe_index[ids_keep, :], dim=-1, index=ids_keep[:, None, :].expand(-1, L, -1)
+                ).reshape(B, -1)
+
             for blk in self.blocks[-self.num_main_blocks:]:
-                x = blk(x)
+                x = blk(x, rpe_index=rpe_index, mask=None)
 
             outs.append(x)
 

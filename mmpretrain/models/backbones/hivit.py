@@ -81,22 +81,24 @@ class Attention(nn.Module):
         self.relative_position_bias_table = nn.Parameter(
             torch.zeros((2 * input_size - 1) *
                         (2 * input_size - 1), num_heads)) if rpe else None
-        if rpe:
-            coords_h = torch.arange(input_size)
-            coords_w = torch.arange(input_size)
-            coords = torch.stack(torch.meshgrid([coords_h, coords_w]))
-            coords_flatten = torch.flatten(coords, 1)
-            relative_coords = coords_flatten[:, :,
-                                             None] - coords_flatten[:, None, :]
-            relative_coords = relative_coords.permute(1, 2, 0).contiguous()
-            relative_coords[:, :, 0] += input_size - 1
-            relative_coords[:, :, 1] += input_size - 1
-            relative_coords[:, :, 0] *= 2 * input_size - 1
-            relative_position_index = relative_coords.sum(-1)
-            self.register_buffer('relative_position_index',
-                                 relative_position_index)
 
-            trunc_normal_(self.relative_position_bias_table, std=.02)
+        # Position index is handled upstream because masked autoencoder knows about masked patches
+        # if rpe:
+        #     coords_h = torch.arange(input_size)
+        #     coords_w = torch.arange(input_size)
+        #     coords = torch.stack(torch.meshgrid([coords_h, coords_w]))
+        #     coords_flatten = torch.flatten(coords, 1)
+        #     relative_coords = coords_flatten[:, :,
+        #                                      None] - coords_flatten[:, None, :]
+        #     relative_coords = relative_coords.permute(1, 2, 0).contiguous()
+        #     relative_coords[:, :, 0] += input_size - 1
+        #     relative_coords[:, :, 1] += input_size - 1
+        #     relative_coords[:, :, 0] *= 2 * input_size - 1
+        #     relative_position_index = relative_coords.sum(-1)
+        #     self.register_buffer('relative_position_index',
+        #                          relative_position_index)
+        #
+        #     trunc_normal_(self.relative_position_bias_table, std=.02)
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
@@ -115,12 +117,9 @@ class Attention(nn.Module):
         attn = (q @ k.transpose(-2, -1))
 
         if rpe_index is not None:
-            rpe_index = self.relative_position_index.view(-1)
             S = int(math.sqrt(rpe_index.size(-1)))
-            relative_position_bias = self.relative_position_bias_table[
-                rpe_index].view(-1, S, S, self.num_heads)
-            relative_position_bias = relative_position_bias.permute(
-                0, 3, 1, 2).contiguous()
+            relative_position_bias = self.relative_position_bias_table[rpe_index].view(-1, S, S, self.num_heads)
+            relative_position_bias = relative_position_bias.permute(0, 3, 1, 2).contiguous()
             attn = attn + relative_position_bias
         if mask is not None:
             mask = mask.bool()
@@ -589,7 +588,8 @@ class HiViT(BaseBackbone):
             x = x + self.interpolate_pos_encoding(x, H, W)
         x = self.pos_drop(x)
 
-        rpe_index = True if self.rpe else None
+        # relative position encoding
+        rpe_index = self.relative_position_index.view(-1) if self.rpe else None
 
         for i, blk in enumerate(self.blocks[-self.num_main_blocks:]):
             x = blk(x, rpe_index)
