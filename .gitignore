@@ -119,8 +119,10 @@ venv.bak/
 
 # custom
 /data
+resources
 .vscode
 .idea
+.run
 *.pkl
 *.pkl.json
 *.log.json
@@ -141,6 +143,9 @@ venv.bak/
 
 # slurm
 *.out
+
+# work dirs
+work_dirs*
 
 # tensorflow
 *.tar.gz
