@@ -6,6 +6,7 @@ from .gap import GlobalAveragePooling
 from .gem import GeneralizedMeanPooling
 from .hr_fuse import HRFuseScales
 from .itpn_neck import iTPNPretrainDecoder
+from .itpn_neck_3d import iTPNPretrainDecoder3D
 from .linear_neck import LinearNeck
 from .mae_neck import ClsBatchNormNeck, MAEPretrainDecoder
 from .milan_neck import MILANPretrainDecoder
@@ -33,5 +34,6 @@ __all__ = [
     'SimMIMLinearDecoder',
     'SwAVNeck',
     'iTPNPretrainDecoder',
+    'iTPNPretrainDecoder3D',
     'SparKLightDecoder',
 ]

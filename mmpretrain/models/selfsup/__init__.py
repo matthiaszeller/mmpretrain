@@ -7,6 +7,7 @@ from .cae import CAE, CAEPretrainViT, DALLEEncoder
 from .densecl import DenseCL
 from .eva import EVA
 from .itpn import iTPN, iTPNHiViT
+from .itpn_3d import iTPNHiViT3D
 from .mae import MAE, MAEHiViT, MAEViT
 from .maskfeat import HOGGenerator, MaskFeat, MaskFeatViT
 from .milan import MILAN, CLIPGenerator, MILANViT
@@ -28,6 +29,7 @@ __all__ = [
     'MAEViT',
     'MAEHiViT',
     'iTPNHiViT',
+    'iTPNHiViT3D',
     'iTPN',
     'HOGGenerator',
     'MaskFeatViT',

@@ -174,6 +174,72 @@ def build_2d_sincos_position_embedding(
     return pos_emb
 
 
+def build_3d_sincos_position_embedding(
+        patches_resolution: Union[int, Sequence[int]],
+        depth: int,
+        embed_dims: int,
+        temperature: Optional[int] = 10000.,
+        scale_depth=None) -> torch.Tensor:
+    """The function is to build position embedding for model to obtain the
+    position information of the image patches.
+
+    Args:
+        patches_resolution (Union[int, Sequence[int]]): The resolution of each
+            patch.
+        embed_dims (int): The dimension of the embedding vector.
+        temperature (int, optional): The temperature parameter. Defaults to
+            10000.
+        scale_depth: a number, a string ('w' or 'h') or None, factor to scale
+
+    Returns:
+        torch.Tensor: The position embedding vector.
+    """
+    assert scale_depth in ('w', 'h', None) or isinstance(scale_depth, (int, float))
+
+    if isinstance(patches_resolution, int):
+        patches_resolution = (patches_resolution, patches_resolution)
+
+    h, w = patches_resolution
+    if scale_depth:
+        if isinstance(scale_depth, str):
+            scale_depth = (depth / w) if scale_depth == 'w' else (depth / h)
+
+    grid_w = torch.arange(w, dtype=torch.float32)
+    grid_h = torch.arange(h, dtype=torch.float32)
+    grid_d = torch.arange(depth, dtype=torch.float32)
+
+    grid_d, grid_w, grid_h = torch_meshgrid(grid_d, grid_w, grid_h)
+    assert embed_dims % 6 == 0, \
+        'Embed dimension must be divisible by 6.'
+    pos_dim = embed_dims // 6
+
+    omega = torch.arange(pos_dim, dtype=torch.float32) / pos_dim
+    omega = 1. / (temperature**omega)
+    if scale_depth:
+        omega_d = scale_depth * torch.arange(pos_dim, dtype=torch.float32) / pos_dim
+        omega_d = 1. / (temperature ** omega_d)
+    else:
+        omega_d = omega
+
+    out_d = torch.einsum('m,d->md', [grid_d.flatten(), omega_d])
+    out_w = torch.einsum('m,d->md', [grid_w.flatten(), omega])
+    out_h = torch.einsum('m,d->md', [grid_h.flatten(), omega])
+
+    pos_emb = torch.cat(
+        [
+            torch.sin(out_w),
+            torch.cos(out_w),
+            torch.sin(out_h),
+            torch.cos(out_h),
+            torch.sin(out_d),
+            torch.cos(out_d),
+        ],
+        dim=1,
+    )[None, :, :]
+
+    return pos_emb
+
+
 class RotaryEmbeddingFast(BaseModule):
     """Implements 2D rotary embedding (RoPE) for image tokens. Position
     encoding is implemented with sin and cos functions,

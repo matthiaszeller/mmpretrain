@@ -15,6 +15,7 @@ from .latent_heads import LatentCrossCorrelationHead, LatentPredictHead
 from .levit_head import LeViTClsHead
 from .linear_head import LinearClsHead
 from .mae_head import MAEPretrainHead
+from .mae_head_3d import MAEPretrainHead3D
 from .margin_head import ArcFaceClsHead
 from .mim_head import MIMHead
 from .mixmim_head import MixMIMPretrainHead
@@ -54,6 +55,7 @@ __all__ = [
     'LatentCrossCorrelationHead',
     'LatentPredictHead',
     'MAEPretrainHead',
+    'MAEPretrainHead3D',
     'MixMIMPretrainHead',
     'SwAVHead',
     'MoCoV3Head',
