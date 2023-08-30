@@ -44,7 +44,8 @@ class MAEPretrainHead(BaseModule):
 
         h = w = imgs.shape[2] // p
         x = imgs.reshape(shape=(imgs.shape[0], self.in_chans, h, p, w, p))
-        x = torch.einsum('nchpwq->nhwpqc', x)
+        #x = torch.einsum('nchpwq->nhwpqc', x)
+        x = x.permute(0, 2, 4, 3, 5, 1)
         x = x.reshape(shape=(imgs.shape[0], h * w, p**2 * self.in_chans))
         return x
 
@@ -63,7 +64,8 @@ class MAEPretrainHead(BaseModule):
         assert h * w == x.shape[1]
 
         x = x.reshape(shape=(x.shape[0], h, w, p, p, self.in_chans))
-        x = torch.einsum('nhwpqc->nchpwq', x)
+        x = x.permute(0, 5, 1, 3, 2, 4)
+        #x = torch.einsum('nhwpqc->nchpwq', x)
         imgs = x.reshape(shape=(x.shape[0], self.in_chans, h * p, h * p))
         return imgs
 
