@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from collections import defaultdict
 from collections.abc import Sequence
+from pathlib import Path
 from zipfile import ZipFile
 
 import cv2
@@ -66,19 +67,44 @@ class LoadImageFromZipFile(LoadImageFromFile):
 
     def __init__(self,
                  color_type: str = 'color',
-                 imdecode_backend: str = 'cv2'):
+                 imdecode_backend: str = 'cv2',
+                 stack_neighbour_slices: int = 0):
         self.color_type = color_type
         self.imdecode_backend = imdecode_backend
+        assert stack_neighbour_slices >= 0
+        self.stack_neighbour_slices = stack_neighbour_slices
 
-    def transform(self, results: dict) -> dict:
-        """Method to load image from zipfile."""
-        with ZipFile(results['zip_path']) as zf:
-            img_bytes = zf.read(results['img_path'])
-
+    def _load(self, zf: ZipFile, img_path: str):
+        img_bytes = zf.read(img_path)
         img = mmcv.imfrombytes(
             img_bytes, flag=self.color_type, backend=self.imdecode_backend
         )
+        return img
 
+    def _get_image_neighbours(self, img_path: str):
+        if self.stack_neighbour_slices == 0:
+            return [img_path]
+
+        img_path = Path(img_path)
+        basename, slicenum = img_path.stem.rsplit('_', 1)
+        slicenum = int(slicenum)
+        return [
+            str(Path(basename + f'_{n}').with_suffix(img_path.suffix))
+            for n in range(slicenum - self.stack_neighbour_slices, slicenum + self.stack_neighbour_slices + 1)
+        ]
+
+    def transform(self, results: dict) -> dict:
+        """Method to load image from zipfile."""
+        img_paths = self._get_image_neighbours(results['img_path'])
+        with ZipFile(results['zip_path']) as zf:
+            img = [
+                self._load(zf, p)
+                for p in img_paths
+            ]
+
+        stack_dim = -1 if img[0].ndim == 2 else 2
+        img = np.stack(img, axis=stack_dim)
+        img = img if img.shape[-1] > 1 else img.squeeze(axis=-1)
         results['img'] = img
         results['img_shape'] = img.shape
         results['ori_shape'] = img.shape
