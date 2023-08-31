@@ -179,7 +179,7 @@ def build_3d_sincos_position_embedding(
         depth: int,
         embed_dims: int,
         temperature: Optional[int] = 10000.,
-        scale_depth=None) -> torch.Tensor:
+        alpha=1.) -> torch.Tensor:
     """The function is to build position embedding for model to obtain the
     position information of the image patches.
 
@@ -189,20 +189,20 @@ def build_3d_sincos_position_embedding(
         embed_dims (int): The dimension of the embedding vector.
         temperature (int, optional): The temperature parameter. Defaults to
             10000.
-        scale_depth: a number, a string ('w' or 'h') or None, factor to scale
+        alpha (tuple[int]): scale factors for depth, width, height
 
     Returns:
         torch.Tensor: The position embedding vector.
     """
-    assert scale_depth in ('w', 'h', None) or isinstance(scale_depth, (int, float))
+    if isinstance(alpha, (int, float)):
+        alpha = (alpha, alpha, alpha)
+    else:
+        assert len(alpha) == 3
 
     if isinstance(patches_resolution, int):
         patches_resolution = (patches_resolution, patches_resolution)
 
     h, w = patches_resolution
-    if scale_depth:
-        if isinstance(scale_depth, str):
-            scale_depth = (depth / w) if scale_depth == 'w' else (depth / h)
 
     grid_w = torch.arange(w, dtype=torch.float32)
     grid_h = torch.arange(h, dtype=torch.float32)
@@ -214,16 +214,13 @@ def build_3d_sincos_position_embedding(
     pos_dim = embed_dims // 6
 
     omega = torch.arange(pos_dim, dtype=torch.float32) / pos_dim
-    omega = 1. / (temperature**omega)
-    if scale_depth:
-        omega_d = scale_depth * torch.arange(pos_dim, dtype=torch.float32) / pos_dim
-        omega_d = 1. / (temperature ** omega_d)
-    else:
-        omega_d = omega
+    omega = 1. / (temperature ** omega)
+
+    omega_d, omega_w, omega_h = omega.view(-1, 1).pow(torch.tensor(alpha)).T
 
     out_d = torch.einsum('m,d->md', [grid_d.flatten(), omega_d])
-    out_w = torch.einsum('m,d->md', [grid_w.flatten(), omega])
-    out_h = torch.einsum('m,d->md', [grid_h.flatten(), omega])
+    out_w = torch.einsum('m,d->md', [grid_w.flatten(), omega_w])
+    out_h = torch.einsum('m,d->md', [grid_h.flatten(), omega_h])
 
     pos_emb = torch.cat(
         [

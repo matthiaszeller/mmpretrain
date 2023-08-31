@@ -111,6 +111,7 @@ class iTPNHiViT3D(HiViT3D):
                 self.patch_embed.patches_resolution,
                 self.num_slice,
                 self.pos_embed.shape[-1],
+                alpha=self.ape_alpha,
             )
             self.pos_embed.data.copy_(pos_embed.float())
 

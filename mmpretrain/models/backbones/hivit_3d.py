@@ -152,6 +152,7 @@ class HiViT3D(HiViT):
                  norm_cfg=dict(type='LN'),
                  out_indices=[23],
                  ape=True,
+                 ape_alpha=1.,
                  rpe=False,
                  patch_norm=True,
                  frozen_stages=-1,
@@ -178,6 +179,7 @@ class HiViT3D(HiViT):
         self.num_slice = n_slice
         self.num_stages = len(self.depths)
         self.ape = ape
+        self.ape_alpha = ape_alpha
         self.rpe = rpe
         self.patch_size = patch_size
         self.num_features = self.embed_dims
