@@ -64,8 +64,10 @@ class iTPNPretrainDecoder3D(iTPNPretrainDecoder):
                  attn_drop_rate: float = 0.0,
                  predict_feature_dim: Optional[float] = None,
                  init_cfg: Optional[Union[List[dict], dict]] = None,
+                 ape_alpha=1.,
                  **kwargs) -> None:
         super().__init__(init_cfg=init_cfg)
+        self.ape_alpha = ape_alpha
         self.patch_resolution = patch_resolution
         self.n_slice = n_slice
         assert reconstruction_type in ['pixel', 'clip'], \
@@ -250,7 +252,8 @@ class iTPNPretrainDecoder3D(iTPNPretrainDecoder):
             decoder_pos_embed = build_3d_sincos_position_embedding(
                 self.patch_resolution,
                 self.n_slice,
-                self.decoder_pos_embed.shape[-1]
+                self.decoder_pos_embed.shape[-1],
+                alpha=self.ape_alpha
             )
             self.decoder_pos_embed.data.copy_(decoder_pos_embed.float())
 

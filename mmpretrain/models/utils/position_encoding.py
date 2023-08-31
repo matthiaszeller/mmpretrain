@@ -189,7 +189,7 @@ def build_3d_sincos_position_embedding(
         embed_dims (int): The dimension of the embedding vector.
         temperature (int, optional): The temperature parameter. Defaults to
             10000.
-        alpha (tuple[int]): scale factors for depth, width, height
+        alpha (tuple[float]): scale factors for depth, width, height
 
     Returns:
         torch.Tensor: The position embedding vector.
