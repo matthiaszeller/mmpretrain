@@ -152,6 +152,33 @@ class iTPNHiViT3D(HiViT3D):
 
         return ids_keep, ids_restore, mask
 
+    def ids_from_mask(self, batch_size: int, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        B, N = mask.shape
+        assert batch_size == B, f'given mask has batch size {B}, expected {batch_size}'
+        assert N == self.num_patches, f'expected mask with {self.num_patches} patches, got {N}'
+        assert mask.sum(dim=-1).diff().eq(0).all(), 'mask has different number of visible patches for each sample'
+
+        mask = mask.to(device=self.pos_embed.device)
+        inverse_mask = 1 - mask
+
+        ids_keep, ids_restore = [], []
+        for b in range(B):
+            ids_keep.append(
+                torch.nonzero(inverse_mask[b]).squeeze(-1)
+            )
+
+            order = torch.arange(N, device=mask.device)
+            # contains at position i the target position j
+            buffer = torch.argsort(order + mask[b] * 1e5)
+            # we rather want the tensor to contain at target position j the index i, because that's how torch.gather works
+            buffer = buffer.argsort()
+            ids_restore.append(buffer)
+
+        ids_keep = torch.stack(ids_keep)
+        ids_restore = torch.stack(ids_restore)
+
+        return ids_keep, ids_restore, mask
+
     def forward_pixel(
         self,
         x: torch.Tensor,
@@ -171,7 +198,10 @@ class iTPNHiViT3D(HiViT3D):
         Args:
             x (torch.Tensor): Input images, which is of shape B x C x H x W.
             mask (bool, optional): To indicate whether the forward function
-                generating ``mask`` or not.
+                generating ``mask`` or not. It can be a tensor, in this case it's assumed
+                to be of shape (B, Npatch), where zero indicates visible patches, and
+                each of the B rows has same number of visible patches. It's used for
+                visualization and interpretation purposes to control masked patches.
 
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Hidden features,
@@ -187,7 +217,11 @@ class iTPNHiViT3D(HiViT3D):
 
         else:
             B, C, H, W = x.shape
-            ids_keep, ids_restore, mask = self.masking_id(B, self.mask_ratio)
+
+            if isinstance(mask, torch.Tensor):
+                ids_keep, ids_restore, mask = self.ids_from_mask(B, mask)
+            else:
+                ids_keep, ids_restore, mask = self.masking_id(B, self.mask_ratio)
 
             x = self.patch_embed(x)
 
